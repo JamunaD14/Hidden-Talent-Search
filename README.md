@@ -120,4 +120,4 @@ Free job ads are available from Arbetsförmedlingen's [JobTech APIs](https://job
 
 ## Team
 
-Built by Jamuna, jagriti, Yali, Dinesh and Ahmed at the AI:spire Hackathon. Thanks to Accenture and Microsoft for organising it.
+Built by Jamuna, Jagriti, Yali, Dinesh and Ahmed at the AI:spire Hackathon. Thanks to Accenture and Microsoft for organising it.
