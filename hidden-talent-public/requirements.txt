@@ -1,0 +1,8 @@
+azure-identity
+azure-cosmos
+azure-search-documents
+azure-storage-blob
+openai
+numpy
+fastapi
+uvicorn

@@ -1,0 +1,893 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hidden Talent Search</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23F5DC52'/%3E%3Ccircle cx='14' cy='14' r='7.5' fill='%23FDFDFB' stroke='%231E2533' stroke-width='2.6'/%3E%3Ccircle cx='14' cy='12' r='2.3' fill='%231E2533'/%3E%3Cpath d='M10.2 18.2a3.8 3.8 0 0 1 7.6 0z' fill='%231E2533'/%3E%3Cpath d='M19.6 19.6l5.4 5.4' stroke='%231E2533' stroke-width='3.2' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Newsreader:ital,opsz,wght@1,6..72,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #F6F7F4;
+    --surface: #FDFDFB;
+    --tint: #EEF0EA;
+    --ink: #1E2533;
+    --muted: #5C6675;
+    --rule: #DADDE2;
+    --mark: #F5DC52;
+    --mark-soft: #FBEFAF;
+    --ok: #2E7458;
+    --warn: #A6501C;
+    --sans: "Atkinson Hyperlegible", system-ui, sans-serif;
+    --voice: "Newsreader", Georgia, serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--paper); color: var(--ink); font: 16px/1.5 var(--sans); }
+  button, input, textarea, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+  a { color: var(--ink); text-underline-offset: 3px; }
+  [hidden] { display: none !important; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* Own words: the highlighter is the product's one visual idea */
+  .words { font-family: var(--voice); font-style: italic; font-size: 18px; line-height: 1.45; quotes: "“" "”"; }
+  .words mark, mark.hl { background: linear-gradient(transparent 55%, var(--mark-soft) 55%); color: inherit; padding: 0 1px; }
+  q.words::before { content: open-quote; } q.words::after { content: close-quote; }
+
+  /* Top bar */
+  .topbar { position: sticky; top: 0; z-index: 20; background: var(--paper); border-bottom: 1px solid var(--rule); }
+  .topbar-in { max-width: 1120px; margin: 0 auto; padding: 14px 24px; display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; }
+  .brand svg { flex: none; display: block; }
+  .brand-name { font-weight: 700; font-size: 20px; letter-spacing: -0.01em; white-space: nowrap; }
+  .brand-name span { font-weight: 400; color: var(--muted); }
+  .tabs { display: flex; gap: 4px; margin-left: auto; }
+  .tabs button { border: 0; background: none; padding: 8px 14px; border-radius: 999px; cursor: pointer; font-weight: 700; color: var(--muted); }
+  .tabs button[aria-selected="true"] { background: var(--ink); color: var(--paper); }
+
+  .page { max-width: 1120px; margin: 0 auto; padding: 32px 24px 120px; }
+
+  /* Start screens */
+  .hero h1 { font-size: 44px; line-height: 1.1; letter-spacing: -0.02em; margin: 24px 0 12px; max-width: 18ch; }
+  .lede { font-size: 20px; color: var(--muted); max-width: 56ch; margin: 0 0 28px; }
+  .steps { list-style: none; counter-reset: step; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 0; margin: 48px 0 0; }
+  .steps li { counter-increment: step; border-top: 2px solid var(--ink); padding-top: 12px; }
+  .steps li::before { content: counter(step); display: block; font-weight: 700; font-size: 14px; color: var(--muted); margin-bottom: 2px; }
+  .steps b { display: block; font-size: 17px; }
+  .steps span { color: var(--muted); font-size: 15px; }
+
+  /* Job picker */
+  .picker { position: relative; max-width: 640px; }
+  .picker input { width: 100%; padding: 14px 16px; font-size: 18px; border: 2px solid var(--ink); border-radius: 10px; background: var(--surface); }
+  .picker.compact input { font-size: 16px; padding: 9px 12px; border-width: 1px; border-color: var(--rule); }
+  .options { position: absolute; left: 0; right: 0; top: calc(100% + 6px); background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; box-shadow: 0 12px 28px rgba(30, 37, 51, 0.12); list-style: none; margin: 0; padding: 6px; max-height: 360px; overflow-y: auto; z-index: 30; }
+  .options button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 9px 10px; border-radius: 6px; cursor: pointer; }
+  .options button:hover, .options button.active { background: var(--tint); }
+  .opt-title { display: block; font-weight: 700; }
+  .opt-meta { display: block; color: var(--muted); font-size: 14px; }
+  .options .empty { padding: 10px; color: var(--muted); }
+  .try { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 16px 0 0; }
+  .try > span { color: var(--muted); font-size: 15px; margin-right: 2px; }
+  .chip { border: 1px solid var(--ink); background: none; border-radius: 999px; padding: 5px 13px; cursor: pointer; font-size: 15px; }
+  .chip:hover { background: var(--tint); }
+  .describe { margin-top: 20px; max-width: 640px; }
+  .describe summary { cursor: pointer; font-weight: 700; }
+  .describe textarea, .js-text { width: 100%; min-height: 110px; margin-top: 10px; padding: 12px 14px; border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); resize: vertical; font-size: 16px; }
+  .btn { padding: 10px 18px; border: 2px solid var(--ink); border-radius: 8px; background: var(--ink); color: var(--paper); font-weight: 700; cursor: pointer; }
+  .btn:disabled { opacity: 0.6; cursor: progress; }
+  .btn.quiet { background: none; color: var(--ink); }
+  .link { border: 0; background: none; padding: 0; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; font-weight: 700; }
+  .hint { color: var(--muted); font-size: 14px; }
+
+  /* Workspace */
+  .work-top { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+  .work-top .picker { flex: 1; min-width: 260px; }
+  .jobhead h2 { margin: 0; font-size: 30px; line-height: 1.15; letter-spacing: -0.01em; }
+  .jobhead .translated { margin: 2px 0 0; color: var(--muted); font-size: 18px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 0; padding: 0; list-style: none; }
+  .tags li { border: 1px solid var(--rule); background: var(--surface); border-radius: 999px; padding: 2px 10px; font-size: 14px; }
+  .tags.needs li { border-color: var(--ink); }
+  .needs-label { font-size: 14px; color: var(--muted); margin: 14px 0 0; }
+
+  .gap { display: flex; gap: 20px; align-items: center; margin: 28px 0 20px; padding: 20px 24px; background: var(--surface); border: 1px solid var(--rule); border-radius: 14px; }
+  .gap .num { font-size: 56px; font-weight: 700; line-height: 1; background: var(--mark); border-radius: 8px; padding: 6px 16px; font-variant-numeric: tabular-nums; }
+  .gap p { margin: 0; font-size: 19px; max-width: 60ch; }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; margin-bottom: 8px; }
+  .seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; padding: 3px; background: var(--surface); flex-wrap: wrap; }
+  .seg button { border: 0; background: none; padding: 6px 13px; border-radius: 999px; cursor: pointer; font-size: 15px; }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); font-weight: 700; }
+  .seg-label { font-size: 14px; color: var(--muted); margin-right: -8px; }
+  .adjust { margin: 8px 0 12px; padding: 16px 18px; background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: end; }
+  .slider label { display: block; font-size: 14px; font-weight: 700; }
+  .slider output { font-weight: 400; color: var(--muted); }
+  .slider input { width: 150px; accent-color: var(--ink); }
+  .check { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+  .check input { width: 18px; height: 18px; accent-color: var(--ink); }
+  select.field { padding: 5px 8px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); font-size: 14px; }
+  .status { color: var(--muted); font-size: 14px; min-height: 1.5em; margin: 6px 0 14px; }
+  .status.error { color: var(--warn); font-weight: 700; }
+
+  /* Candidate cards */
+  .cards { display: flex; flex-direction: column; gap: 14px; }
+  .cand { background: var(--surface); border: 1px solid var(--rule); border-radius: 14px; padding: 18px 20px; display: grid; grid-template-columns: 40px 1fr; gap: 4px 14px; }
+  .cand.on-list { border-color: var(--ink); box-shadow: inset 4px 0 0 var(--mark); }
+  .rank { font-size: 22px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; line-height: 1.2; }
+  .move { display: block; font-size: 12px; font-weight: 700; }
+  .move.up { color: var(--ok); } .move.down { color: var(--warn); } .move.new { color: var(--ink); font-weight: 400; }
+  .cand-top { display: flex; gap: 16px; align-items: start; justify-content: space-between; flex-wrap: wrap; }
+  .who h3 { margin: 0; font-size: 20px; line-height: 1.25; }
+  .who .sub { margin: 2px 0 0; color: var(--muted); font-size: 15px; }
+  .verdict { text-align: right; }
+  .label { display: inline-block; border-radius: 999px; padding: 3px 12px; font-weight: 700; font-size: 15px; border: 1px solid var(--ink); white-space: nowrap; }
+  .label.strong { background: var(--ink); color: var(--paper); }
+  .label.possible, .label.weak { border-color: var(--rule); color: var(--muted); font-weight: 400; }
+  .score { display: block; color: var(--muted); font-size: 13px; margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; }
+  .badge { font-size: 13px; font-weight: 700; padding: 2px 9px; border-radius: 4px; }
+  .badge.missed { background: var(--mark); }
+  .badge.both { border: 1px solid var(--rule); font-weight: 400; color: var(--muted); }
+  .badge.warn { border: 1px solid var(--warn); color: var(--warn); }
+  .why { margin: 12px 0 0; max-width: 72ch; }
+  .why.pending { color: var(--muted); font-size: 14px; }
+  .bridge { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 8px; }
+  .bridge li { display: grid; grid-template-columns: minmax(130px, 220px) 1fr; gap: 14px; align-items: baseline; padding-top: 8px; border-top: 1px solid var(--rule); }
+  .need { font-weight: 700; }
+  .need small { display: block; font-weight: 400; color: var(--muted); font-size: 13px; }
+  .bridge .plain { color: var(--muted); font-size: 15px; }
+  .cand-foot { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; justify-content: space-between; margin-top: 14px; }
+  .notes { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 14px; }
+  .notes li { padding-left: 18px; position: relative; }
+  .notes li::before { position: absolute; left: 0; font-weight: 700; }
+  .notes li.ok::before { content: "✓"; color: var(--ok); }
+  .notes li.warn::before { content: "!"; color: var(--warn); left: 4px; }
+  .notes li.lack::before { content: "–"; color: var(--muted); left: 2px; }
+  .actions { display: flex; gap: 10px; align-items: center; }
+  .sl-btn { border: 2px solid var(--ink); background: none; border-radius: 8px; padding: 6px 12px; font-weight: 700; cursor: pointer; }
+  .sl-btn[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  .detail { grid-column: 2; margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--rule); display: grid; grid-template-columns: 1fr 1fr; gap: 20px 32px; }
+  .detail h4 { margin: 0 0 8px; font-size: 15px; }
+  .bars { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+  .bars li { display: grid; grid-template-columns: 1fr 110px 34px; gap: 10px; align-items: center; font-size: 14px; }
+  .track { height: 6px; background: var(--rule); border-radius: 3px; overflow: hidden; }
+  .fill { height: 100%; background: var(--ink); }
+  .bars .val { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .detail p { margin: 0 0 10px; }
+
+  /* Compare */
+  .compare-sum { font-size: 17px; margin: 0 0 14px; }
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .col { background: var(--surface); border: 1px solid var(--rule); border-radius: 14px; padding: 16px 18px; }
+  .col.ours { border-color: var(--ink); }
+  .col h3 { margin: 0; font-size: 18px; }
+  .col .hint { margin: 2px 0 10px; }
+  .mini { list-style: none; padding: 0; margin: 0; }
+  .mini li { display: grid; grid-template-columns: 26px 1fr auto; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px solid var(--rule); }
+  .mini .n { color: var(--muted); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .mini b { display: block; }
+  .mini .sub { color: var(--muted); font-size: 13px; }
+  .tag { font-size: 13px; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+  .tag.missed { background: var(--mark); font-weight: 700; }
+  .tag.both { border: 1px solid var(--rule); color: var(--muted); }
+  .tag.out { color: var(--muted); }
+  .mini button.jump { border: 0; background: none; padding: 0; text-align: left; cursor: pointer; }
+  .mini button.jump:hover b { text-decoration: underline; }
+
+  /* Shortlist bar */
+  .shortlist-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 25; background: var(--ink); color: var(--paper); }
+  .sb-in { max-width: 1120px; margin: 0 auto; padding: 12px 24px; display: flex; gap: 14px 20px; align-items: center; flex-wrap: wrap; }
+  .sb-in .count { font-weight: 700; }
+  .sb-in .saved { color: #C9CED8; font-size: 14px; }
+  .sb-in .spacer { flex: 1; }
+  .sb-in .btn { background: var(--mark); color: var(--ink); border-color: var(--mark); }
+  .sb-in .btn.quiet { background: none; color: var(--paper); border-color: #8A93A3; }
+
+  /* Jobseeker */
+  .js-row { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+  .js-text { max-width: 760px; min-height: 140px; font-size: 17px; }
+  .js-note { margin: 8px 0 0; font-size: 14px; color: var(--muted); }
+  .grid2 { display: grid; grid-template-columns: 3fr 2fr; gap: 20px; margin: 8px 0 32px; }
+  .panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 14px; padding: 18px 20px; }
+  .panel h2, .section-title { margin: 0 0 12px; font-size: 20px; }
+  .panel h3 { margin: 18px 0 8px; font-size: 15px; }
+  .translate { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+  .translate li { display: grid; grid-template-columns: minmax(120px, 190px) 1fr; gap: 14px; align-items: baseline; border-top: 1px solid var(--rule); padding-top: 9px; }
+  .skill { font-weight: 700; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chips span { border: 1px solid var(--ink); border-radius: 999px; padding: 2px 11px; font-size: 15px; }
+  .jobs { display: grid; gap: 14px; }
+  .jc { background: var(--surface); border: 1px solid var(--rule); border-radius: 14px; padding: 18px 20px; }
+  .jc-top { display: flex; justify-content: space-between; gap: 16px; align-items: start; flex-wrap: wrap; }
+  .jc h3 { margin: 0; font-size: 20px; }
+  .jc .sub { margin: 2px 0 0; color: var(--muted); }
+  .jc .sec { margin: 14px 0 4px; font-size: 14px; font-weight: 700; color: var(--muted); }
+  .jc .grow { margin: 0; }
+
+  @media (max-width: 860px) {
+    .hero h1 { font-size: 34px; }
+    .steps { grid-template-columns: 1fr; }
+    .compare, .grid2, .detail { grid-template-columns: 1fr; }
+    .cand { grid-template-columns: 30px 1fr; padding: 16px; }
+    .bridge li, .translate li { grid-template-columns: 1fr; gap: 2px; }
+    .gap { flex-direction: column; align-items: start; }
+    .verdict { text-align: left; }
+    .page { padding: 20px 16px 140px; }
+    .sb-in { padding: 10px 16px; gap: 8px 10px; flex-wrap: nowrap; }
+    .sb-in .count { font-size: 14px; }
+    .sb-title, .sb-in .saved { display: none; }
+    .sb-in .btn { padding: 6px 10px; font-size: 14px; white-space: nowrap; }
+    .topbar-in { padding: 10px 16px; gap: 10px; }
+    .tabs { margin-left: 0; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .fill { transition: width .3s ease; }
+    .cand { transition: border-color .2s ease; }
+  }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="#" id="brand">
+      <svg width="34" height="34" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="9" fill="#F5DC52"/>
+        <circle cx="14" cy="14" r="7.5" fill="#FDFDFB" stroke="#1E2533" stroke-width="2.6"/>
+        <circle cx="14" cy="12" r="2.3" fill="#1E2533"/>
+        <path d="M10.2 18.2a3.8 3.8 0 0 1 7.6 0z" fill="#1E2533"/>
+        <path d="M19.6 19.6l5.4 5.4" stroke="#1E2533" stroke-width="3.2" stroke-linecap="round"/>
+      </svg>
+      <span class="brand-name">Hidden Talent <span>Search</span></span>
+    </a>
+    <nav class="tabs" role="tablist" aria-label="Who are you?">
+      <button role="tab" id="tab-recruiter" aria-controls="view-recruiter" aria-selected="true" data-view="recruiter">Find candidates</button>
+      <button role="tab" id="tab-jobseeker" aria-controls="view-jobseeker" aria-selected="false" data-view="jobseeker">For jobseekers</button>
+    </nav>
+  </div>
+</header>
+
+<!-- ============ Recruiter ============ -->
+<main id="view-recruiter" class="page" role="tabpanel" aria-labelledby="tab-recruiter">
+  <section id="r-start" class="hero">
+    <h1>Find the people your keyword search misses.</h1>
+    <p class="lede">Pick a job ad. We read every candidate’s own words, show who fits and why, and you build a shortlist.</p>
+    <div class="picker" data-picker>
+      <label class="sr" for="job-q-start">Search the job ads</label>
+      <input id="job-q-start" type="search" autocomplete="off" placeholder="Search 200 job ads, e.g. kundtjänst, lager, butik" aria-controls="job-opts-start" aria-expanded="false">
+      <ul class="options" id="job-opts-start" role="listbox" hidden></ul>
+    </div>
+    <div class="try" data-try><span>Try:</span></div>
+    <details class="describe">
+      <summary>Or describe who you need, in your own words</summary>
+      <label class="sr" for="free-text">Describe who you need</label>
+      <textarea id="free-text" placeholder="e.g. Someone who can help customers with technical problems and explain things simply. Part-time is fine."></textarea>
+      <div class="js-row"><button id="free-btn" class="btn" type="button">Find candidates</button><span class="hint">English or Swedish.</span></div>
+    </details>
+    <ol class="steps">
+      <li><b>Pick a job ad</b><span>200 real Swedish ads, read into English needs and conditions.</span></li>
+      <li><b>See who keyword search misses</b><span>Every candidate is compared by what they have done, not the words they chose.</span></li>
+      <li><b>Shortlist with reasons</b><span>Each match shows the job’s needs next to the candidate’s own words.</span></li>
+    </ol>
+  </section>
+
+  <section id="r-work" hidden>
+    <div class="work-top">
+      <div class="picker compact" data-picker>
+        <label class="sr" for="job-q-work">Search for another job ad</label>
+        <input id="job-q-work" type="search" autocomplete="off" placeholder="Search for another job ad" aria-controls="job-opts-work" aria-expanded="false">
+        <ul class="options" id="job-opts-work" role="listbox" hidden></ul>
+      </div>
+      <button class="link" id="new-search" type="button">Start over</button>
+    </div>
+    <div class="jobhead" id="job-head"></div>
+    <div class="gap" id="gap"></div>
+    <div class="toolbar">
+      <div class="seg" role="group" aria-label="View" id="mode">
+        <button type="button" data-mode="cards" aria-pressed="true">Best matches</button>
+        <button type="button" data-mode="compare" aria-pressed="false">Compare with keyword search</button>
+      </div>
+      <span class="seg-label" id="focus-label">Focus</span>
+      <div class="seg" role="group" aria-labelledby="focus-label" id="presets"></div>
+      <button class="link" id="adjust-btn" type="button" aria-expanded="false" aria-controls="adjust">Adjust</button>
+    </div>
+    <div class="adjust" id="adjust" hidden>
+      <div class="slider"><label for="w-skills">Skills match <output id="o-skills"></output></label><input id="w-skills" type="range" min="0" max="100" step="5"></div>
+      <div class="slider"><label for="w-semantic">Overall fit <output id="o-semantic"></output></label><input id="w-semantic" type="range" min="0" max="100" step="5"></div>
+      <div class="slider"><label for="w-preferences">Fits their wishes <output id="o-preferences"></output></label><input id="w-preferences" type="range" min="0" max="100" step="5"></div>
+      <div class="slider"><label for="w-evidence">Backed by their own words <output id="o-evidence"></output></label><input id="w-evidence" type="range" min="0" max="100" step="5"></div>
+      <div class="slider"><label for="f-hours">Hours they asked for</label>
+        <select id="f-hours" class="field"><option value="">Any</option><option value="part-time">Open to part-time</option><option value="full-time">Open to full-time</option></select></div>
+      <label class="check"><input id="hide-conflicts" type="checkbox"> Hide people whose wishes conflict with this job</label>
+    </div>
+    <p class="status" id="r-status" role="status"></p>
+    <div id="results"></div>
+  </section>
+</main>
+
+<div class="shortlist-bar" id="shortlist-bar" hidden>
+  <div class="sb-in">
+    <span class="count" id="sb-count"></span>
+    <span class="saved" id="sb-saved"></span>
+    <span class="spacer"></span>
+    <button class="btn" id="sb-export" type="button">Export CSV</button>
+    <button class="btn quiet" id="sb-clear" type="button">Clear</button>
+  </div>
+</div>
+
+<!-- ============ Jobseeker ============ -->
+<main id="view-jobseeker" class="page" role="tabpanel" aria-labelledby="tab-jobseeker" hidden>
+  <section class="hero">
+    <h1>See which jobs your experience fits, in the words employers use.</h1>
+    <p class="lede">Paid work, volunteering, studies, hobbies: it all counts. Write a few sentences about what you have done and what you’re looking for.</p>
+    <label class="sr" for="js-text">Your experience, in your own words</label>
+    <textarea id="js-text" class="js-text" placeholder="e.g. I help at a community library: I show visitors how to use the self-service machines and stay calm when someone is upset. I’d like a support role, part-time to start."></textarea>
+    <p class="js-note">We remove names, ages and family details before any AI reads your text.</p>
+    <div class="js-row"><button id="js-go" class="btn" type="button">Find my jobs</button></div>
+    <div class="try" id="js-samples"><span>Or see a sample jobseeker:</span></div>
+  </section>
+  <p class="status" id="j-status" role="status"></p>
+  <section id="js-results" hidden>
+    <div class="grid2">
+      <div class="panel">
+        <h2>Your experience, in employer words</h2>
+        <ul class="translate" id="js-translate"></ul>
+      </div>
+      <div class="panel">
+        <h2>Words employers search for</h2>
+        <div class="chips" id="js-sv"></div>
+        <h3>Job titles that fit you</h3>
+        <div class="chips" id="js-roles"></div>
+        <div id="js-gaps"></div>
+      </div>
+    </div>
+    <h2 class="section-title">Jobs you fit best</h2>
+    <div class="jobs" id="js-jobs"></div>
+  </section>
+</main>
+
+<script>
+/* ---------- Basics ---------- */
+const $ = (id) => document.getElementById(id);
+const DEFAULT_WEIGHTS = { skills: 50, semantic: 25, preferences: 15, evidence: 10 };
+const PRESETS = [
+  { id: "balanced", label: "Balanced", weights: { skills: 50, semantic: 25, preferences: 15, evidence: 10 } },
+  { id: "skills", label: "Skills first", weights: { skills: 70, semantic: 15, preferences: 5, evidence: 10 } },
+  { id: "wishes", label: "Their wishes first", weights: { skills: 35, semantic: 20, preferences: 35, evidence: 10 } },
+  { id: "overall", label: "Overall fit", weights: { skills: 30, semantic: 50, preferences: 10, evidence: 10 } },
+];
+const SCORE_LABELS = { skills: "Skills match", semantic: "Overall fit", preferences: "Fits their wishes", evidence: "Backed by their own words" };
+const TRY_JOBS = [["Customer support", "kundtjänst"], ["Retail", "butikssäljare"], ["Warehouse", "lager"], ["Restaurant", "restaurang"]];
+const SAMPLE_IDS = ["candidate-001", "candidate-007", "candidate-018", "candidate-022", "candidate-053", "candidate-081"];
+
+const state = {
+  jobId: null, queryText: null, preset: "balanced", weights: { ...DEFAULT_WEIGHTS },
+  mode: "cards", last: null, lastContext: null, previousRanks: null,
+  explanations: {}, open: new Set(), shortlists: loadShortlists(),
+};
+
+function esc(v) { return String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+function hash(text) { let h = 0; for (const ch of text) h = (h * 31 + ch.charCodeAt(0)) | 0; return (h >>> 0).toString(36); }
+
+async function api(path, body) {
+  let res;
+  try {
+    res = await fetch(path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
+  } catch (e) {
+    throw new Error("The app isn’t responding. Check that the server is running, then reload this page");
+  }
+  if (!res.ok) {
+    let detail = res.statusText;
+    try {
+      const data = await res.json();
+      detail = Array.isArray(data.detail) ? "Please write at least a few sentences" : (data.detail || detail);
+    } catch (e) {}
+    throw new Error(detail);
+  }
+  return res.json();
+}
+
+function setStatus(el, text, isError = false) { el.textContent = text; el.classList.toggle("error", isError); }
+
+function highlight(text, phrases) {
+  const lower = text.toLowerCase(), ranges = [];
+  for (const p of phrases) {
+    const q = (p || "").toLowerCase().replace(/^[\s"'.]+|[\s"'.]+$/g, "");
+    if (q.length < 4) continue;
+    const at = lower.indexOf(q);
+    if (at >= 0) ranges.push([at, at + q.length]);
+  }
+  ranges.sort((a, b) => a[0] - b[0]);
+  let html = "", pos = 0;
+  for (const [start, end] of ranges) {
+    if (start < pos) continue;
+    html += esc(text.slice(pos, start)) + `<mark>${esc(text.slice(start, end))}</mark>`;
+    pos = end;
+  }
+  return html + esc(text.slice(pos));
+}
+
+function labelClass(label) { return (label || "").split(" ")[0].toLowerCase(); }
+
+function experienceText(x) {
+  if (!x.experience) return "";
+  const kind = x.experience_kind && !["unknown", "personal"].includes(x.experience_kind) ? ` (${x.experience_kind})` : "";
+  return `${x.experience}${kind}`;
+}
+function experienceLine(x) { return x.experience ? `${x.alias}. Experience from ${experienceText(x)}.` : x.alias; }
+const REMOVED_WORDS = { name: "your name", age: "your age", "family details": "family details", "family member": "family members",
+  gender: "gender", origin: "where you’re from", contact: "contact details", id: "an ID number" };
+function listWords(words) { return words.length < 2 ? words.join("") : `${words.slice(0, -1).join(", ")} and ${words.at(-1)}`; }
+
+/* ---------- Views (tabs) ---------- */
+function showView(view) {
+  for (const v of ["recruiter", "jobseeker"]) {
+    $(`view-${v}`).hidden = v !== view;
+    $(`tab-${v}`).setAttribute("aria-selected", String(v === view));
+  }
+  $("shortlist-bar").hidden = view !== "recruiter" || !shortlistCount();
+  try { history.replaceState(null, "", view === "jobseeker" ? "#jobseeker" : "#"); } catch (e) {}
+  if (view === "jobseeker") loadSamples();
+}
+document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => showView(b.dataset.view)));
+$("brand").addEventListener("click", (e) => { e.preventDefault(); showView("recruiter"); startOver(); });
+
+/* ---------- Job picker ---------- */
+function setupPicker(root) {
+  const input = root.querySelector("input"), list = root.querySelector(".options");
+  let items = [], active = -1;
+  const close = () => { list.hidden = true; input.setAttribute("aria-expanded", "false"); active = -1; };
+  const render = () => {
+    list.hidden = false; input.setAttribute("aria-expanded", "true");
+    list.innerHTML = items.length ? items.map((j, i) => `
+      <li role="option" aria-selected="${i === active}"><button type="button" data-id="${esc(j.id)}" class="${i === active ? "active" : ""}">
+        <span class="opt-title">${esc(j.title)}</span>
+        <span class="opt-meta">${esc([j.title_en, j.municipality].filter(Boolean).join(", "))}</span>
+      </button></li>`).join("") : `<li class="empty">No job ads match these words.</li>`;
+  };
+  const search = debounce(async () => {
+    try { items = (await api(`/api/jobs?limit=8${input.value.trim() ? `&q=${encodeURIComponent(input.value.trim())}` : ""}`)); render(); }
+    catch (e) { items = []; list.hidden = false; list.innerHTML = `<li class="empty">${esc(e.message)}</li>`; }
+  }, 200);
+  input.addEventListener("input", search);
+  input.addEventListener("focus", search);
+  input.addEventListener("keydown", (e) => {
+    if (list.hidden) return;
+    if (e.key === "ArrowDown") { active = Math.min(active + 1, items.length - 1); render(); e.preventDefault(); }
+    else if (e.key === "ArrowUp") { active = Math.max(active - 1, 0); render(); e.preventDefault(); }
+    else if (e.key === "Enter" && items.length) { pickJob(items[Math.max(active, 0)].id); close(); input.value = ""; e.preventDefault(); }
+    else if (e.key === "Escape") close();
+  });
+  list.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-id]");
+    if (b) { pickJob(b.dataset.id); close(); input.value = ""; }
+  });
+  document.addEventListener("click", (e) => { if (!root.contains(e.target)) close(); });
+}
+document.querySelectorAll("[data-picker]").forEach(setupPicker);
+
+document.querySelectorAll("[data-try]").forEach((box) => {
+  box.insertAdjacentHTML("beforeend", TRY_JOBS.map(([label, q]) => `<button class="chip" type="button" data-q="${esc(q)}">${esc(label)}</button>`).join(""));
+  box.addEventListener("click", async (e) => {
+    const b = e.target.closest("button[data-q]");
+    if (!b) return;
+    try {
+      const jobs = await api(`/api/jobs?limit=1&q=${encodeURIComponent(b.dataset.q)}`);
+      if (jobs.length) pickJob(jobs[0].id);
+      else setStatus($("r-status"), `No job ad matched “${b.dataset.q}”.`, true);
+    } catch (err) { alertStart(err.message); }
+  });
+});
+function alertStart(message) { $("r-work").hidden = false; setStatus($("r-status"), message, true); }
+
+$("free-btn").addEventListener("click", () => {
+  const text = $("free-text").value.trim();
+  if (text.length < 15) { $("free-text").focus(); return; }
+  state.jobId = null; state.queryText = text; state.open.clear(); state.previousRanks = null;
+  runMatch(true);
+});
+function pickJob(id) { state.jobId = id; state.queryText = null; state.open.clear(); state.previousRanks = null; runMatch(true); }
+function startOver() {
+  state.jobId = null; state.queryText = null; state.last = null;
+  $("r-work").hidden = true; $("r-start").hidden = false; renderShortlistBar();
+  $("job-q-start").focus();
+}
+$("new-search").addEventListener("click", startOver);
+
+/* ---------- Focus presets and fine-tuning ---------- */
+$("presets").innerHTML = PRESETS.map((p) => `<button type="button" data-preset="${p.id}" aria-pressed="${p.id === state.preset}">${esc(p.label)}</button>`).join("");
+function syncSliders() {
+  for (const key of Object.keys(DEFAULT_WEIGHTS)) { $(`w-${key}`).value = state.weights[key]; $(`o-${key}`).textContent = state.weights[key]; }
+  document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.preset === state.preset)));
+}
+$("presets").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-preset]");
+  if (!b) return;
+  state.preset = b.dataset.preset;
+  state.weights = { ...PRESETS.find((p) => p.id === state.preset).weights };
+  syncSliders(); runMatch(false);
+});
+for (const key of Object.keys(DEFAULT_WEIGHTS)) {
+  const input = $(`w-${key}`);
+  input.addEventListener("input", () => { $(`o-${key}`).textContent = input.value; });
+  input.addEventListener("input", debounce(() => { state.weights[key] = Number(input.value); state.preset = "custom"; syncSliders(); runMatch(false); }, 250));
+}
+syncSliders();
+$("adjust-btn").addEventListener("click", () => {
+  const open = $("adjust").hidden;
+  $("adjust").hidden = !open; $("adjust-btn").setAttribute("aria-expanded", String(open));
+});
+$("hide-conflicts").addEventListener("change", () => runMatch(false));
+$("f-hours").addEventListener("change", () => runMatch(false));
+$("mode").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-mode]");
+  if (b) setMode(b.dataset.mode);
+});
+function setMode(mode) {
+  state.mode = mode;
+  document.querySelectorAll("#mode button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
+  if (state.last) renderResults(state.last);
+}
+
+/* ---------- Matching ---------- */
+let requestCounter = 0;
+function contextKey() { return state.jobId || `free-text-${hash(state.queryText || "")}`; }
+
+async function runMatch(isNewSearch) {
+  $("r-start").hidden = true; $("r-work").hidden = false;
+  const myRequest = ++requestCounter, context = contextKey();
+  const before = !isNewSearch && state.last && state.lastContext === context
+    ? Object.fromEntries(state.last.results.map((r) => [r.candidate_id, r.rank])) : null;
+  if (isNewSearch) { $("results").innerHTML = ""; $("gap").innerHTML = ""; $("job-head").innerHTML = ""; window.scrollTo(0, 0); }
+  setStatus($("r-status"), state.queryText ? "Reading your description and ranking candidates…" : "Ranking candidates…");
+  try {
+    const hoursFilter = $("f-hours").value || null;
+    const data = await api("/api/match", {
+      job_id: state.jobId, query_text: state.queryText, weights: state.weights,
+      top_k: 10, exclude_conflicts: $("hide-conflicts").checked, hours_filter: hoursFilter,
+    });
+    if (myRequest !== requestCounter) return;
+    state.previousRanks = before; state.last = data; state.lastContext = context;
+    renderJob(data); renderResults(data); renderShortlistBar();
+    setStatus($("r-status"), statusText(data, hoursFilter, before));
+    loadExplanations(data);
+  } catch (e) {
+    if (myRequest !== requestCounter) return;
+    setStatus($("r-status"), `Couldn’t rank candidates. ${e.message}.`, true);
+  }
+}
+
+function statusText(data, hoursFilter, before) {
+  const secs = data.stats.seconds < 1 ? "under a second" : `${data.stats.seconds} seconds`;
+  const r = data.retrieval, total = data.stats.candidates_total;
+  let text = r.retrieved !== null
+    ? `Azure AI Search picked ${r.retrieved} of ${total} candidates by keywords and meaning; ranked in ${secs}.`
+    : `Ranked ${data.stats.candidates_scored} candidates in ${secs}.`;
+  const removed = data.stats.removed_by_filter;
+  if (hoursFilter && removed !== null) {
+    const other = hoursFilter === "part-time" ? "full-time" : "part-time";
+    text += removed ? ` Left out ${removed} who asked for ${other} work only.` : ` Nobody asked for ${other} work only, so the hours filter left nobody out.`;
+  }
+  if (before) {
+    const moved = data.results.filter((x) => before[x.candidate_id] !== x.rank).length;
+    text += moved ? ` ${moved} of the top ${data.results.length} changed place.` : " The order stayed the same: these candidates lead on every criterion.";
+  }
+  return text;
+}
+
+function renderJob(data) {
+  const job = data.job, req = job.requirements || {};
+  const conditions = [
+    job.municipality,
+    req.hours === "either" ? "full- or part-time" : req.hours && req.hours !== "not stated" ? req.hours : null,
+    ...(req.schedule || []), req.sales_targets ? "sales targets" : null, req.training_provided ? "training provided" : null,
+  ].filter(Boolean);
+  $("job-head").innerHTML = `
+    <h2>${esc(job.title)}</h2>
+    ${req.title_en && req.title_en !== job.title ? `<p class="translated">${esc(req.title_en)}</p>` : ""}
+    ${conditions.length ? `<ul class="tags" aria-label="Conditions">${conditions.map((c) => `<li>${esc(c)}</li>`).join("")}</ul>` : ""}
+    ${(req.must_have || []).length ? `<p class="needs-label">The job needs</p><ul class="tags needs">${req.must_have.map((n) => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}
+    ${job.source_url ? `<p class="hint"><a href="${esc(job.source_url)}" target="_blank" rel="noopener">Read the original ad</a></p>` : ""}`;
+  const b = data.baseline, hidden = data.stats.hidden_talent_in_top_k, k = data.stats.top_k;
+  $("gap").innerHTML = b.ids === null
+    ? `<p>The keyword comparison isn’t available right now, so every candidate is shown without it.</p>`
+    : `<span class="num">${hidden}</span>
+       <p><b>of your ${k} best matches would be missed by a keyword search</b> for “${esc(b.query)}” and the required skills.
+       ${state.mode === "cards" ? `<button class="link" type="button" data-goto="compare">See both lists side by side</button>` : ""}</p>`;
+}
+$("gap").addEventListener("click", (e) => { if (e.target.closest("[data-goto]")) setMode("compare"); });
+
+function movement(r) {
+  const before = state.previousRanks;
+  if (!before) return "";
+  const was = before[r.candidate_id];
+  if (was === undefined) return `<span class="move new" title="New in the top 10">new</span>`;
+  if (was > r.rank) return `<span class="move up" title="Was #${was}">↑${was - r.rank}</span>`;
+  if (was < r.rank) return `<span class="move down" title="Was #${was}">↓${r.rank - was}</span>`;
+  return "";
+}
+
+function renderResults(data) {
+  renderJob(data);
+  if (!data.results.length) {
+    $("results").innerHTML = `<p class="status">Nobody is left with these settings. Set “Hours they asked for” to Any, or untick “Hide people whose wishes conflict”.</p>`;
+    return;
+  }
+  $("results").innerHTML = state.mode === "compare" ? compareView(data) : `<div class="cards">${data.results.map(card).join("")}</div>`;
+}
+
+function bridgeRows(r, max) {
+  const rows = r.matched.filter((m) => m.need_kind !== "taxonomy").concat(r.matched.filter((m) => m.need_kind === "taxonomy"));
+  return rows.slice(0, max).map((m) => {
+    const kind = { must: "required", nice: "a plus", taxonomy: "skill in the ad" }[m.need_kind];
+    const words = m.evidence
+      ? `<q class="words"><mark>${esc(m.evidence)}</mark></q>`
+      : `<span class="plain">${m.source === "role" ? "Could work as" : "Uses the term"} <b>${esc(m.candidate_term)}</b></span>`;
+    return `<li><span class="need">${esc(m.need)}<small>${kind}</small></span>${words}</li>`;
+  }).join("");
+}
+
+function card(r) {
+  const ex = state.explanations[explainKey(r.candidate_id)];
+  const isOpen = state.open.has(r.candidate_id), listed = isShortlisted(r.candidate_id);
+  const badge = state.last.baseline.ids === null ? "" : r.hidden_talent
+    ? `<span class="badge missed">Missed by keyword search</span>` : `<span class="badge both">Also found by keyword search</span>`;
+  const conflict = r.preference_conflict ? `<span class="badge warn">Conflicts with what they asked for</span>` : "";
+  const notes = [
+    ...r.preference_notes.map((n) => `<li class="${n.type}">${esc(n.text)}</li>`),
+    ...r.gaps.slice(0, 2).map((g) => `<li class="lack">Not shown: ${esc(g)}</li>`),
+    r.gaps.length > 2 ? `<li class="lack">and ${r.gaps.length - 2} more gaps</li>` : "",
+  ].join("");
+  const why = ex ? `<p class="why">${esc(ex.why)}</p>` : r.rank <= 5 ? `<p class="why pending">Writing why they fit…</p>` : "";
+  return `
+  <article class="cand ${listed ? "on-list" : ""}" id="c-${esc(r.candidate_id)}">
+    <div class="rank">${r.rank}${movement(r)}</div>
+    <div>
+      <div class="cand-top">
+        <div class="who">
+          <h3>${esc(r.roles[0] || r.alias)}</h3>
+          <p class="sub">${esc(experienceLine(r))}</p>
+          <div class="badges">${badge}${conflict}</div>
+        </div>
+        <div class="verdict"><span class="label ${labelClass(r.label)}">${esc(r.label)}</span><span class="score">${Math.round(r.total)} / 100</span></div>
+      </div>
+      ${why}
+      ${r.matched.length ? `<ul class="bridge" aria-label="The job’s needs in their own words">${bridgeRows(r, 3)}</ul>` : `<p class="why pending">No clear skill matches for this job.</p>`}
+      <div class="cand-foot">
+        <ul class="notes">${notes}</ul>
+        <div class="actions">
+          <button class="link" type="button" data-more="${esc(r.candidate_id)}" aria-expanded="${isOpen}" aria-controls="d-${esc(r.candidate_id)}">${isOpen ? "Less detail" : "More detail"}</button>
+          <button class="sl-btn" type="button" data-shortlist="${esc(r.candidate_id)}" aria-pressed="${listed}">${listed ? "On shortlist" : "Add to shortlist"}</button>
+        </div>
+      </div>
+    </div>
+    <div class="detail" id="d-${esc(r.candidate_id)}" ${isOpen ? "" : "hidden"}>${isOpen ? detail(r, ex) : ""}</div>
+  </article>`;
+}
+
+function detail(r, ex) {
+  const bars = Object.keys(SCORE_LABELS).map((k) => {
+    const pct = Math.round(r.scores[k] * 100);
+    return `<li><span>${SCORE_LABELS[k]}${k === "semantic" ? " <span class=\"hint\">(compared with the others)</span>" : ""}</span><span class="track"><span class="fill" style="display:block;width:${pct}%"></span></span><span class="val">${pct}</span></li>`;
+  }).join("");
+  const exText = ex
+    ? `${ex.watch_out && ex.watch_out !== "None" ? `<p><b>Watch out:</b> ${esc(ex.watch_out)}</p>` : ""}<p><b>Ask in the interview:</b> ${esc(ex.interview_question)}</p>`
+    : `<p><button class="btn quiet" type="button" data-explain="${esc(r.candidate_id)}">Write why they fit</button></p>`;
+  const gaps = [...r.gaps.map((g) => `Not shown in their experience: ${g}`), ...r.stated_gaps.map((g) => `They say they lack: ${g}`)];
+  return `
+    <div>
+      <h4>Their own words</h4>
+      <p class="words">${highlight(r.background_text, r.matched.map((m) => m.evidence))}</p>
+      ${r.matched.length > 3 ? `<h4>Every need they cover</h4><ul class="bridge">${bridgeRows(r, 12)}</ul>` : ""}
+    </div>
+    <div>
+      <h4>How the score is made</h4>
+      <ul class="bars">${bars}</ul>
+      <h4 style="margin-top:16px">Next step</h4>
+      ${exText}
+      ${gaps.length ? `<h4 style="margin-top:16px">Gaps</h4><ul class="notes" style="display:block">${gaps.map((g) => `<li class="lack">${esc(g)}</li>`).join("")}</ul>` : ""}
+    </div>`;
+}
+
+function compareView(data) {
+  const k = data.results.length, b = data.baseline;
+  if (b.ids === null) return `<p class="status">The keyword comparison isn’t available right now.</p>` + `<div class="cards">${data.results.map(card).join("")}</div>`;
+  const hidden = data.results.filter((r) => r.hidden_talent).length;
+  const kwRank = Object.fromEntries(data.baseline_results.map((x) => [x.candidate_id, x.keyword_rank]));
+  const ours = data.results.map((r) => `
+    <li><span class="n">${r.rank}</span>
+      <button class="jump" type="button" data-jump="${esc(r.candidate_id)}"><b>${esc(r.roles[0] || r.alias)}</b><span class="sub">${esc(r.alias)}, ${esc(r.label.toLowerCase())}</span></button>
+      ${r.hidden_talent ? `<span class="tag missed">Missed by keyword search</span>` : `<span class="tag both">Keyword #${kwRank[r.candidate_id] || "?"}</span>`}</li>`).join("");
+  const theirs = data.baseline_results.length ? data.baseline_results.map((x) => `
+    <li><span class="n">${x.keyword_rank}</span>
+      <span><b>${esc(x.roles[0] || x.alias)}</b><span class="sub">${esc(x.alias)}</span></span>
+      ${x.our_rank && x.our_rank <= k ? `<span class="tag both">Our #${x.our_rank}</span>` : `<span class="tag out">Not in our top ${k}</span>`}</li>`).join("")
+    : `<li><span></span><span class="sub">The keyword search found nobody for these words.</span><span></span></li>`;
+  return `
+    <p class="compare-sum">The two lists agree on <b>${k - hidden}</b> ${k - hidden === 1 ? "person" : "people"}. <b>${hidden}</b> of our top ${k} ${hidden === 1 ? "doesn’t" : "don’t"} appear in the keyword list at all.</p>
+    <div class="compare">
+      <section class="col"><h3>Keyword search</h3><p class="hint">Looks for “${esc(b.query)}” and the required skills in the candidates’ own words.</p><ol class="mini">${theirs}</ol></section>
+      <section class="col ours"><h3>Hidden Talent Search</h3><p class="hint">Compares every need with what each candidate has actually done.</p><ol class="mini">${ours}</ol></section>
+    </div>`;
+}
+
+$("results").addEventListener("click", async (e) => {
+  const more = e.target.closest("[data-more]");
+  if (more) {
+    const id = more.dataset.more;
+    state.open.has(id) ? state.open.delete(id) : state.open.add(id);
+    renderResults(state.last);
+    return;
+  }
+  const sl = e.target.closest("[data-shortlist]");
+  if (sl) { toggleShortlist(sl.dataset.shortlist); return; }
+  const jump = e.target.closest("[data-jump]");
+  if (jump) {
+    state.open.add(jump.dataset.jump); setMode("cards");
+    const el = $(`c-${jump.dataset.jump}`);
+    if (el) el.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    return;
+  }
+  const one = e.target.closest("[data-explain]");
+  if (one) {
+    one.disabled = true; one.textContent = "Writing…";
+    await fetchExplanations([one.dataset.explain]);
+    renderResults(state.last);
+  }
+});
+
+/* ---------- Explanations ---------- */
+function explainKey(id) { return `${contextKey()}|${id}`; }
+async function fetchExplanations(ids) {
+  const forJob = state.jobId, forQuery = state.queryText;
+  try {
+    const result = await api("/api/explain", { job_id: forJob, query_text: forQuery, candidate_ids: ids });
+    if (forJob !== state.jobId || forQuery !== state.queryText) return;
+    for (const [id, ex] of Object.entries(result)) state.explanations[explainKey(id)] = ex;
+  } catch (e) {
+    for (const id of ids) state.explanations[explainKey(id)] = { why: `Couldn’t write an explanation: ${e.message}.`, watch_out: "None", interview_question: "–" };
+  }
+}
+async function loadExplanations(data) {
+  const missing = data.results.slice(0, 5).map((r) => r.candidate_id).filter((id) => !state.explanations[explainKey(id)]);
+  if (!missing.length) return;
+  await fetchExplanations(missing);
+  if (state.last) renderResults(state.last);
+}
+
+/* ---------- Shortlist ---------- */
+function loadShortlists() { try { return JSON.parse(localStorage.getItem("hts-shortlists") || "{}"); } catch (e) { return {}; } }
+function persistShortlists() { try { localStorage.setItem("hts-shortlists", JSON.stringify(state.shortlists)); } catch (e) {} }
+function currentList() { return state.shortlists[contextKey()]; }
+function isShortlisted(id) { const l = currentList(); return !!(l && l.items[id]); }
+function shortlistCount() { const l = currentList(); return l ? Object.keys(l.items).length : 0; }
+
+function toggleShortlist(id) {
+  const key = contextKey(), r = state.last.results.find((x) => x.candidate_id === id);
+  if (!r) return;
+  const list = state.shortlists[key] || (state.shortlists[key] = { title: state.last.job.title, items: {} });
+  if (list.items[id]) delete list.items[id];
+  else list.items[id] = {
+    candidate_id: id, alias: r.alias, roles: r.roles, experience: experienceText(r), label: r.label,
+    total: r.total, hidden_talent: r.hidden_talent,
+    matched: r.matched.slice(0, 5).map((m) => `${m.need}: ${m.evidence || m.candidate_term}`),
+  };
+  persistShortlists(); renderResults(state.last); renderShortlistBar(); syncShortlist();
+}
+
+function renderShortlistBar() {
+  const list = currentList(), n = shortlistCount();
+  $("shortlist-bar").hidden = !n || $("view-recruiter").hidden || !state.last;
+  if (n) $("sb-count").innerHTML = `${n} on your shortlist<span class="sb-title"> for ${esc(list.title)}</span>`;
+}
+
+const syncShortlist = debounce(async () => {
+  const list = currentList();
+  if (!list) return;
+  $("sb-saved").textContent = "Saving…";
+  try {
+    const res = await api("/api/shortlist", { job_id: contextKey(), job_title: list.title, candidates: Object.values(list.items) });
+    $("sb-saved").textContent = res.saved ? "Saved" : "Saved on this device";
+  } catch (e) { $("sb-saved").textContent = "Saved on this device"; }
+}, 700);
+
+$("sb-clear").addEventListener("click", () => {
+  delete state.shortlists[contextKey()]; persistShortlists(); syncShortlistCleared(); renderShortlistBar();
+  if (state.last) renderResults(state.last);
+});
+function syncShortlistCleared() { api("/api/shortlist", { job_id: contextKey(), job_title: state.last?.job.title, candidates: [] }).catch(() => {}); }
+
+$("sb-export").addEventListener("click", () => {
+  const list = currentList();
+  if (!list) return;
+  const cell = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const rows = [["Candidate", "Could be", "Experience", "Match", "Score", "Missed by keyword search", "Why they fit", "Watch out", "Interview question", "Needs they cover"]];
+  for (const item of Object.values(list.items)) {
+    const ex = state.explanations[`${contextKey()}|${item.candidate_id}`] || {};
+    rows.push([item.alias, item.roles.join(", "), item.experience, item.label, Math.round(item.total),
+      item.hidden_talent ? "yes" : "no", ex.why, ex.watch_out && ex.watch_out !== "None" ? ex.watch_out : "", ex.interview_question, item.matched.join("; ")]);
+  }
+  const csv = "﻿" + rows.map((r) => r.map(cell).join(",")).join("\r\n");
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const a = document.createElement("a");
+  a.href = url; a.download = `shortlist-${list.title.toLowerCase().replace(/[^a-z0-9åäö]+/g, "-").replace(/^-|-$/g, "")}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+
+/* ---------- Jobseeker view ---------- */
+let samplesLoaded = false, jsCounter = 0;
+async function loadSamples() {
+  if (samplesLoaded) return;
+  samplesLoaded = true;
+  try {
+    const people = await api(`/api/candidates?ids=${SAMPLE_IDS.join(",")}`);
+    $("js-samples").insertAdjacentHTML("beforeend", people.map((p) =>
+      `<button class="chip" type="button" data-sample="${esc(p.candidate_id)}">${esc(p.experience || p.roles[0] || p.alias)}</button>`).join(""));
+  } catch (e) { samplesLoaded = false; }
+}
+$("js-samples").addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-sample]");
+  if (!b) return;
+  const my = ++jsCounter;
+  setStatus($("j-status"), "Finding the best-fit jobs…");
+  try {
+    const data = await api(`/api/candidates/${encodeURIComponent(b.dataset.sample)}/jobs?top_k=5`);
+    if (my !== jsCounter) return;
+    $("js-text").value = data.background_text;
+    renderJobseeker(data, `Sample: ${data.candidate.alias}, from our fictional candidate pool.`);
+  } catch (err) { if (my === jsCounter) setStatus($("j-status"), `Couldn’t load this sample. ${err.message}.`, true); }
+});
+$("js-go").addEventListener("click", async () => {
+  const text = $("js-text").value.trim();
+  if (text.length < 40) { setStatus($("j-status"), "Write a few sentences about what you have done: at least 40 characters.", true); $("js-text").focus(); return; }
+  const my = ++jsCounter;
+  $("js-go").disabled = true;
+  setStatus($("j-status"), "Reading your story and comparing it with 200 job ads. This takes about 10 seconds…");
+  try {
+    const data = await api("/api/jobseeker", { text, top_k: 5 });
+    if (my !== jsCounter) return;
+    const words = data.removed_details.map((d) => REMOVED_WORDS[d.replace(/[\[\]]/g, "")]).filter(Boolean);
+    const removed = words.length ? ` We removed ${listWords(words)} before any AI read it.` : "";
+    renderJobseeker(data, `Read in ${data.seconds} seconds.${removed}`);
+  } catch (err) { if (my === jsCounter) setStatus($("j-status"), `Couldn’t read your story. ${err.message}.`, true); }
+  finally { $("js-go").disabled = false; }
+});
+
+function renderJobseeker(data, note) {
+  const p = data.profile;
+  $("js-results").hidden = false;
+  setStatus($("j-status"), note);
+  $("js-translate").innerHTML = p.skills.length ? p.skills.map((s) => `
+    <li><span class="skill">${esc(s.name)}</span><q class="words"><mark>${esc(s.evidence)}</mark></q></li>`).join("")
+    : `<li><span class="hint">We couldn’t find clear skills yet. Try adding what you did, step by step.</span></li>`;
+  $("js-sv").innerHTML = p.search_terms_sv.map((t) => `<span lang="sv">${esc(t)}</span>`).join("");
+  $("js-roles").innerHTML = p.possible_roles.map((t) => `<span>${esc(t)}</span>`).join("");
+  $("js-gaps").innerHTML = p.stated_gaps.length ? `<h3>Things you said you’d like to learn</h3><div class="chips">${p.stated_gaps.map((g) => `<span>${esc(g)}</span>`).join("")}</div>` : "";
+  $("js-jobs").innerHTML = data.jobs.map((j) => {
+    const facts = [j.municipality, j.hours && j.hours !== "not stated" ? (j.hours === "either" ? "full- or part-time" : j.hours) : null, ...(j.schedule || []),
+      j.sales_targets ? "sales targets" : null, j.training_provided ? "training provided" : null].filter(Boolean);
+    const have = j.matched.filter((m) => m.need_kind !== "taxonomy").slice(0, 4);
+    return `
+    <article class="jc">
+      <div class="jc-top">
+        <div><h3>${esc(j.title)}</h3><p class="sub">${esc([j.title_en, j.municipality].filter(Boolean).join(", "))}</p></div>
+        <div class="verdict"><span class="label ${labelClass(j.label)}">${esc(j.label)}</span><span class="score">${Math.round(j.total)} / 100</span></div>
+      </div>
+      ${facts.length ? `<ul class="tags">${facts.map((f) => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}
+      ${have.length ? `<p class="sec">You already have what they ask for</p><ul class="bridge">${have.map((m) => `
+        <li><span class="need">${esc(m.need)}</span>${m.evidence ? `<q class="words"><mark>${esc(m.evidence)}</mark></q>` : `<span class="plain">${m.source === "role" ? "You could work as" : "You match the term"} <b>${esc(m.candidate_term)}</b></span>`}</li>`).join("")}</ul>` : ""}
+      ${j.gaps.length ? `<p class="sec">To grow into it</p><p class="grow">${esc(j.gaps.join(", "))}</p>` : ""}
+      ${j.preference_notes.length ? `<ul class="notes" style="margin-top:12px">${j.preference_notes.map((n) => `<li class="${n.type}">${esc(n.text.replace("the candidate prefers", "you prefer").replace("candidate wants", "you want").replace("which the candidate asked for", "which you asked for"))}</li>`).join("")}</ul>` : ""}
+      ${j.source_url ? `<p class="hint" style="margin:12px 0 0"><a href="${esc(j.source_url)}" target="_blank" rel="noopener">Read the ad</a></p>` : ""}
+    </article>`;
+  }).join("");
+}
+
+/* ---------- Start ---------- */
+showView(location.hash === "#jobseeker" ? "jobseeker" : "recruiter");
+</script>
+</body>
+</html>
